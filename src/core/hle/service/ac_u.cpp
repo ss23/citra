@@ -24,7 +24,7 @@ static void GetWifiStatus(Service::Interface* self) {
     // it returns a valid result without implementing full functionality.
 
     cmd_buff[1] = 0; // No error
-    cmd_buff[2] = 0; // Connection type set to none
+    cmd_buff[2] = 2; // Connection type set to none
 
     LOG_WARNING(Service_AC, "(STUBBED) called");
 }

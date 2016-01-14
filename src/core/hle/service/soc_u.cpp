@@ -294,6 +294,12 @@ union CTRSockAddr {
     }
 };
 
+struct hostent_wrapper {
+    u32 padding; // 4 bytes pading
+    u32 num_results; // number of hostent results
+    char* h_name;
+};
+
 /// Holds info about the currently open sockets
 static std::unordered_map<u32, SocketHolder> open_sockets;
 
@@ -652,6 +658,27 @@ static void Shutdown(Service::Interface* self) {
     cmd_buffer[1] = result;
 }
 
+static void GetHostByName(Service::Interface* self) {
+    u32* cmd_buffer = Kernel::GetCommandBuffer();
+    u32 hostname_size = cmd_buffer[1];
+    u32 output_buf_size = cmd_buffer[2];
+
+    cmd_buffer[2] = 0; // POSIX return code
+    cmd_buffer[1] = 0; // Result code
+
+    char * hostname = reinterpret_cast<char*>(Memory::GetPointer(cmd_buffer[4])); // hostname_ptr -> hostname str
+
+    struct hostent_wrapper *output_buf = reinterpret_cast<struct hostent_wrapper*>(Memory::GetPointer(cmd_buffer[0x104 >> 2]));
+
+    struct hostent *he;
+    he = ::gethostbyname(hostname);
+
+    output_buf->h_name = he->h_name;
+    output_buf->padding = 0xdeadbeef;
+
+    printf("Finding information for %s...\n", output_buf->h_name);
+}
+
 static void GetPeerName(Service::Interface* self) {
     u32* cmd_buffer = Kernel::GetCommandBuffer();
     u32 socket_handle = cmd_buffer[1];
@@ -740,7 +767,7 @@ const Interface::FunctionInfo FunctionTable[] = {
     {0x000A0106, SendTo,                        "SendTo"},
     {0x000B0042, Close,                         "Close"},
     {0x000C0082, Shutdown,                      "Shutdown"},
-    {0x000D0082, nullptr,                       "GetHostByName"},
+    {0x000D0082, GetHostByName,                 "GetHostByName"},
     {0x000E00C2, nullptr,                       "GetHostByAddr"},
     {0x000F0106, nullptr,                       "unknown_resolve_ip"},
     {0x00110102, nullptr,                       "GetSockOpt"},
